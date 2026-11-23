@@ -1,0 +1,1 @@
+{"version":"0.2.0","configurations":[{"name":"마지막 한 입 · 광고 실행","type":"node","request":"launch","program":"${workspaceFolder}/server.mjs","console":"internalConsole","serverReadyAction":{"pattern":"Ready (http://[^ ]+)","uriFormat":"%s","action":"openExternally"}}]}
