@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>단골 그릇 · 작동 프로토타입</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --mint5:#0CEFD3; --mint7:#00A39B; --mint8:#007D7B; --mint1:#E6FFF8;
+  --fg1:#181A1C; --fg2:#4B4D4F; --fg3:#646668; --fg4:#97999B;
+  --bg:#F3F5F7; --page:#E4E6E8; --line:#EBEBEB; --border:#D4D4D4;
+  --or1:#FFF5ED; --or5:#FF8400; --or7:#BB4500; --red:#FF403E; --coupon:#F26B4C;
+  --ease:cubic-bezier(0.16,1,0.3,1);
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--page);color:var(--fg1);font-family:'Pretendard','Noto Sans KR',system-ui,sans-serif;display:flex;align-items:center;justify-content:center;gap:48px;padding:32px;flex-wrap:wrap}
+button{font-family:inherit;cursor:pointer}
+.display{font-family:'Do Hyeon',sans-serif;font-weight:400}
+
+/* side panel */
+.side{width:300px;display:flex;flex-direction:column;gap:16px}
+.side .tag{align-self:flex-start;font-size:12px;font-weight:700;color:#fff;background:var(--fg1);border-radius:99px;padding:5px 12px}
+.side h1{margin:0;font-size:44px;line-height:1.05}
+.side .stepname{font-size:13px;font-weight:700;color:var(--mint8)}
+.side h2{margin:0;font-size:28px;line-height:1.15}
+.side p{margin:0;font-size:15px;line-height:1.6;color:var(--fg2)}
+.dots{display:flex;gap:6px}
+.dots span{width:8px;height:8px;border-radius:99px;background:#B1B3B5;transition:all .3s var(--ease)}
+.dots span.on{width:24px;background:var(--fg1)}
+.restart{align-self:flex-start;border:1.5px solid var(--border);background:transparent;border-radius:99px;padding:10px 16px;font-size:14px;font-weight:700;color:var(--fg1)}
+
+/* phone */
+.phone{width:390px;height:844px;border-radius:44px;background:#000;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);flex:none}
+.screen{position:relative;width:100%;height:100%;border-radius:36px;overflow:hidden;background:#fff}
+.view{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;transform:translateX(12px);pointer-events:none;transition:opacity .25s var(--ease),transform .25s var(--ease)}
+.view.active{opacity:1;transform:none;pointer-events:auto}
+.scroll{flex:1;overflow-y:auto}
+.hdr{height:56px;padding:0 16px;display:flex;align-items:center;gap:8px;background:#fff;flex:none}
+.hdr .title{font-size:17px;font-weight:800}
+.iconbtn{width:40px;height:40px;margin-left:-8px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;border-radius:99px}
+.iconbtn:active{background:rgba(0,0,0,.08)}
+.chip{display:inline-flex;align-items:center;font-size:11px;font-weight:700;border-radius:99px;padding:3px 8px}
+.chip.mint{color:var(--mint8);background:var(--mint1)}
+.chip.red{color:#fff;background:var(--red)}
+.chip.black{color:#fff;background:var(--fg1)}
+.cta{padding:12px 16px 24px;background:#fff;flex:none}
+.btn{width:100%;height:56px;border:0;border-radius:9999px;background:var(--fg1);color:#fff;font-size:16px;font-weight:700;transition:transform .12s var(--ease),opacity .2s}
+.btn:active{transform:scale(.98)}
+.btn:disabled{background:rgba(0,0,20,.1);color:rgba(24,26,28,.33);cursor:not-allowed}
+.btn.mint{height:64px;background:var(--mint5);color:var(--fg1);font-family:'Do Hyeon',sans-serif;font-size:24px;display:flex;align-items:center;justify-content:center;gap:8px}
+.toast{position:absolute;left:50%;bottom:110px;transform:translate(-50%,8px);background:rgba(18,18,18,.9);color:rgba(255,255,255,.95);font-size:14px;border-radius:99px;padding:12px 18px;white-space:nowrap;opacity:0;transition:all .25s var(--ease);pointer-events:none;z-index:9}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* 1 menu */
+.photo{height:220px;background:#F2E6DE;display:flex;align-items:center;justify-content:center;color:#785339;font-size:14px}
+.forecast{margin:4px 16px 16px;background:var(--or1);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.lv{display:flex;gap:4px}.lv i{width:14px;height:14px;border-radius:99px;background:#FFE4CF;transition:background .3s}
+.lv i.on{background:var(--or5)}
+.pill{font-size:12px;font-weight:500;background:#fff;border-radius:99px;padding:4px 10px;color:var(--fg2)}
+
+/* 2 cart */
+.opt{width:100%;text-align:left;border:1px solid var(--border);background:#fff;border-radius:16px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start;transition:all .2s var(--ease)}
+.opt .rd{width:22px;height:22px;border-radius:99px;border:1.5px solid #B1B3B5;flex:none;margin-top:1px;display:flex;align-items:center;justify-content:center}
+.opt[aria-checked="true"]{border:1.5px solid var(--mint5);background:var(--mint1)}
+.opt[aria-checked="true"] .rd{background:var(--fg1);border-color:var(--fg1)}
+.opt[aria-checked="true"] .rd::after{content:"";width:8px;height:8px;border-radius:99px;background:var(--mint5)}
+.seg{flex:1;height:42px;border-radius:9999px;border:1px solid var(--border);background:#fff;font-size:14px;font-weight:500;color:var(--fg2)}
+.seg[aria-pressed="true"]{background:var(--fg1);border-color:var(--fg1);color:#fff;font-weight:700}
+
+/* 3 lock */
+.lock{background:var(--fg1);padding:40px 12px 12px;justify-content:space-between}
+.noti{background:rgba(255,255,255,.92);border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;transform:translateY(-12px);opacity:0;transition:all .4s var(--ease) .2s}
+.view.active .noti{transform:none;opacity:1}
+.sheet{background:#fff;border-radius:24px;padding:12px 16px 16px;display:flex;flex-direction:column;gap:16px}
+.field{height:48px;width:100%;font-family:inherit;font-size:14px;background:#F5F5F5;border:1px solid var(--border);border-radius:12px;padding:0 14px;color:var(--fg1)}
+.field:focus{outline:none;background:#fff;border:1.5px solid var(--fg1)}
+
+/* 4 fill */
+.fillview{background:var(--mint5)}
+.strike{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--fg1);transition:color .3s}
+.strike b{color:transparent;transition:color .3s}
+.strike span{background:linear-gradient(var(--fg4),var(--fg4)) no-repeat 0 55%/0% 1.5px;transition:background-size .4s var(--ease)}
+.strike.done{color:var(--fg4)}.strike.done b{color:var(--mint8)}
+.strike.done span{background-size:100% 1.5px}
+.sum{opacity:0;transition:opacity .3s}.sum.show{opacity:1}
+
+/* 5 cupboard */
+.shelf{background:var(--mint5);border-radius:16px;padding:14px 8px 12px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.bowlbtn{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:6px;border-radius:12px;padding:4px 0;color:var(--fg1)}
+.bowlbtn[aria-pressed="true"]{background:rgba(255,255,255,.45)}
+.detail{background:#fff;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.stamps{display:flex;gap:6px}.stamps i{flex:1;height:8px;border-radius:99px;background:var(--line)}.stamps i.on{background:var(--mint7)}
+.ticket{width:60px;height:42px;border-radius:10px;background:var(--coupon);color:#fff;font-family:'Do Hyeon',sans-serif;font-size:16px;display:flex;align-items:center;justify-content:center;transform:rotate(-4deg);box-shadow:2px 3px 0 rgba(18,18,18,.12);flex:none}
+.tabbar{height:72px;background:#fff;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);align-items:center;font-size:11px;color:var(--fg4);flex:none}
+.tabbar span{display:flex;flex-direction:column;align-items:center;gap:4px}
+.tabbar .on{color:var(--fg1);font-weight:700}
+@media (max-width:760px){.side{width:390px}}
+</style>
+</head>
+<body>
+
+<aside class="side" aria-live="polite">
+  <span class="tag">배달의민족 서비스 제안 · 콘셉트</span>
+  <h1 class="display">배달에도<br>단골이<br>생겼다</h1>
+  <div class="dots" id="dots"><span></span><span></span><span></span><span></span><span></span></div>
+  <span class="stepname" id="stepname"></span>
+  <h2 class="display" id="steptitle"></h2>
+  <p id="stepdesc"></p>
+  <button class="restart" id="restart" type="button">처음부터 다시 보기</button>
+</aside>
+
+<div class="phone">
+<div class="screen" id="screen">
+
+  <!-- 1. 메뉴 상세 · 뒤처리 예보 -->
+  <section class="view" data-step="1" aria-label="메뉴 상세">
+    <div class="hdr" style="justify-content:space-between">
+      <button class="iconbtn" type="button" aria-label="뒤로"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#181A1C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <span style="position:relative"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#181A1C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L22 7H6"/></svg></span>
+    </div>
+    <div class="scroll">
+      <div class="photo">[메뉴 사진]</div>
+      <div style="padding:18px 20px 12px;display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;gap:6px"><span class="chip mint">그릇 배달 가능</span><span class="chip red">인기 1위</span></div>
+        <div style="font-size:22px;font-weight:800">엽기떡볶이</div>
+        <div style="font-size:13px;color:var(--fg3)">분모자떡볶이 선택 시, 떡이 분모자로 변경돼요.</div>
+        <div style="font-size:13px"><span style="color:#E8B100" aria-hidden="true">★</span> <b>4.7</b> <span style="color:var(--fg4)">리뷰 136</span></div>
+        <div style="font-size:20px;font-weight:800;letter-spacing:-.02em">14,000원</div>
+      </div>
+      <div class="forecast">
+        <div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:15px">뒤처리 예보</b><span class="chip black">AI 분석</span></div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:14px;color:var(--fg2)">치우기 난이도</span>
+          <span class="lv" id="lv" role="img" aria-label="5단계 중 4단계"><i></i><i></i><i></i><i></i><i></i></span>
+          <b style="font-size:14px;color:var(--or7)">높음</b>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill">남은 국물</span><span class="pill">빨간 기름</span><span class="pill">분리배출</span></div>
+        <div style="background:#fff;border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:8px">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#181A1C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11h18a9 9 0 0 1-18 0z" fill="#0CEFD3"/><path d="M8 21h8"/></svg>
+          <b style="font-size:13px">그릇으로 받으면 뒤처리 0 · 내 그릇도 채워져요</b>
+        </div>
+      </div>
+    </div>
+    <div class="cta"><button class="btn" type="button" data-go="2">14,000원 담기</button></div>
+  </section>
+
+  <!-- 2. 장바구니 · 그릇 주문 -->
+  <section class="view" data-step="2" aria-label="장바구니" style="background:var(--bg)">
+    <div class="hdr"><button class="iconbtn" type="button" aria-label="뒤로" data-go="1"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#181A1C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><span class="title">장바구니</span></div>
+    <div class="scroll">
+      <div style="background:#fff;padding:16px 20px;display:flex;flex-direction:column;gap:12px;margin-bottom:8px">
+        <b style="font-size:15px">동대문엽기떡볶이 숭실대점 ›</b>
+        <div style="display:flex;gap:12px">
+          <div style="width:56px;height:56px;border-radius:12px;background:#F2E6DE;flex:none"></div>
+          <div style="display:flex;flex-direction:column;gap:3px"><b style="font-size:15px">엽기떡볶이</b><span style="font-size:13px;color:var(--fg3)">엽기오뎅 · 덜매운맛</span><b style="font-size:15px">14,000원</b></div>
+        </div>
+      </div>
+      <div style="background:#fff;padding:16px 20px;display:flex;flex-direction:column;gap:14px;min-height:100%">
+        <div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:15px">일회용 수저·포크</b><span class="chip black" style="font-size:13px;padding:6px 12px">안 받기</span></div>
+        <div style="height:1px;background:var(--line)"></div>
+        <b style="font-size:16px" id="rcvlabel">어떻게 받으실래요?</b>
+        <div role="radiogroup" aria-labelledby="rcvlabel" style="display:flex;flex-direction:column;gap:10px">
+          <button class="opt" type="button" role="radio" aria-checked="false" data-rcv="bowl">
+            <span class="rd"></span>
+            <span style="display:flex;flex-direction:column;gap:4px">
+              <b style="font-size:15px">그릇에 담아 받기</b>
+              <span style="font-size:13px;color:var(--fg2)">다 드시면 문 앞에 두세요, 치워 드려요</span>
+              <span style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px"><span class="chip mint" style="background:#fff">추가 0원</span><span class="chip mint" style="background:#fff">500원 적립</span><span class="chip mint" style="background:#fff">단골 그릇 +1칸</span></span>
+            </span>
+          </button>
+          <button class="opt" type="button" role="radio" aria-checked="false" data-rcv="disposable">
+            <span class="rd"></span>
+            <span style="display:flex;flex-direction:column;gap:4px"><b style="font-size:15px">일회용기</b><span style="font-size:13px;color:var(--fg3)">다 먹고 헹구기 → 분리배출</span></span>
+          </button>
+        </div>
+        <div style="background:var(--bg);border-radius:12px;padding:10px 12px;display:flex;gap:8px;align-items:center">
+          <span style="font-size:11px;font-weight:800;color:var(--mint5);background:var(--fg1);border-radius:6px;padding:2px 6px">AI</span>
+          <span style="font-size:13px;color:var(--fg2)">이번 달 떡볶이 4번, 용기 4개를 씻으셨어요.</span>
+        </div>
+      </div>
+    </div>
+    <div class="cta" style="border-top:1px solid var(--line)"><button class="btn" type="button" id="orderBtn" disabled>받는 방법을 골라 주세요</button></div>
+  </section>
+
+  <!-- 3. 식후 케어 (핵심) -->
+  <section class="view lock" data-step="3" aria-label="식후 케어">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="clock" style="text-align:center;font-size:60px;font-weight:500;color:#fff;letter-spacing:-.02em">19:42</div>
+      <div class="noti">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="display" style="width:22px;height:22px;border-radius:6px;background:var(--mint5);display:flex;align-items:center;justify-content:center;font-size:10px">배민</span>
+          <span style="font-size:12px;color:var(--fg3)">배달의민족 · 지금</span>
+        </div>
+        <b style="font-size:15px">다 드셨어요?</b>
+        <span style="font-size:14px;line-height:1.45;color:#313335">엽기떡볶이 그릇, 봉투째 문 앞에 두고 [잘먹었습니다]만 눌러 주세요.</span>
+      </div>
+    </div>
+    <div class="sheet">
+      <div style="width:36px;height:4px;border-radius:99px;background:#D5D7D9;align-self:center"></div>
+      <b style="font-size:17px" id="whenlabel">언제 가져갈까요?</b>
+      <div style="display:flex;gap:8px" role="group" aria-labelledby="whenlabel">
+        <button class="seg" type="button" aria-pressed="true" data-when="지금">지금</button>
+        <button class="seg" type="button" aria-pressed="false" data-when="외출 후">외출 후</button>
+        <button class="seg" type="button" aria-pressed="false" data-when="내일 아침">내일 아침</button>
+      </div>
+      <label style="display:flex;flex-direction:column;gap:6px">
+        <span style="font-size:14px;font-weight:700">사장님께 한마디 <span style="font-weight:400;color:var(--fg4)">(선택)</span></span>
+        <input class="field" id="msg" type="text" value="오늘도 맛있게 먹었어요!">
+      </label>
+      <button class="btn mint" type="button" id="thanksBtn">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#181A1C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11h18a9 9 0 0 1-18 0z" fill="#fff"/><path d="M8 21h8"/></svg>
+        잘먹었습니다
+      </button>
+      <span style="text-align:center;font-size:12px;color:var(--fg3)">씻지 않아도 돼요 · 7단계 세척은 전문 업체가 해요</span>
+    </div>
+  </section>
+
+  <!-- 3b. 일회용기를 고른 경우 -->
+  <section class="view" data-step="3b" aria-label="일회용기 뒤처리" style="background:var(--bg)">
+    <div class="hdr"><span class="title">식사 후 할 일</span></div>
+    <div class="scroll" style="padding:16px;display:flex;flex-direction:column;gap:12px">
+      <div style="background:#fff;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px">
+        <b style="font-size:17px">일회용기는 이렇게 치워야 해요</b>
+        <div style="display:flex;gap:10px;align-items:center;font-size:15px"><span style="width:22px;height:22px;border-radius:6px;border:1.5px solid #B1B3B5"></span>남은 국물 버리기</div>
+        <div style="display:flex;gap:10px;align-items:center;font-size:15px"><span style="width:22px;height:22px;border-radius:6px;border:1.5px solid #B1B3B5"></span>빨간 기름 헹구기</div>
+        <div style="display:flex;gap:10px;align-items:center;font-size:15px"><span style="width:22px;height:22px;border-radius:6px;border:1.5px solid #B1B3B5"></span>말려서 분리배출하러 나가기</div>
+      </div>
+      <div style="background:var(--mint1);border-radius:16px;padding:16px;font-size:14px;line-height:1.5"><b>그릇으로 받았다면?</b><br>문 앞에 두고 [잘먹었습니다] 한 번이면 끝났어요.</div>
+    </div>
+    <div class="cta"><button class="btn" type="button" data-go="2">그릇으로 다시 골라 보기</button></div>
+  </section>
+
+  <!-- 4. 그릇 한 칸 채움 -->
+  <section class="view fillview" data-step="4" aria-label="그릇 한 칸 채움">
+    <div style="padding:40px 24px 8px;display:flex;flex-direction:column;align-items:center;gap:14px">
+      <span class="chip black" style="font-size:13px;padding:5px 12px">엽기떡볶이 숭실대점 · 단골 그릇</span>
+      <svg width="210" height="158" viewBox="0 0 200 150" role="img" aria-label="5칸 중 4칸이 채워진 그릇">
+        <defs><clipPath id="bowlclip"><path d="M10 40h180a90 90 0 0 1-180 0z"/></clipPath></defs>
+        <path d="M16 46h180a90 90 0 0 1-180 0z" fill="#181A1C"/>
+        <g clip-path="url(#bowlclip)">
+          <rect x="0" y="40" width="200" height="110" fill="#fff"/>
+          <rect id="fillrect" x="0" y="84" width="200" height="66" fill="#00A39B" style="transition:y .9s cubic-bezier(0.16,1,0.3,1),height .9s cubic-bezier(0.16,1,0.3,1)"/>
+        </g>
+        <path d="M10 40h180a90 90 0 0 1-180 0z" fill="none" stroke="#181A1C" stroke-width="5"/>
+        <path d="M78 26c0-8 8-8 8-16M100 26c0-8 8-8 8-16M122 26c0-8 8-8 8-16" fill="none" stroke="#181A1C" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+      <div class="display" style="font-size:36px;line-height:1.1;text-align:center">한 칸<br>채워졌어요!</div>
+      <div style="font-size:15px;font-weight:500" id="fillcount">3 / 5칸</div>
+    </div>
+    <div style="flex:1"></div>
+    <div style="background:#fff;border-radius:24px 24px 0 0;padding:20px 20px 24px;display:flex;flex-direction:column;gap:12px">
+      <b style="font-size:16px">오늘 안 한 일</b>
+      <div class="strike"><b>✓</b><span>남은 국물 버리기</span></div>
+      <div class="strike"><b>✓</b><span>빨간 기름 헹구기</span></div>
+      <div class="strike"><b>✓</b><span>분리배출하러 나가기</span></div>
+      <div class="sum" id="sum" style="background:var(--bg);border-radius:12px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
+        <b style="font-size:14px">+500원 적립</b><span style="font-size:12px;color:var(--fg3)">일회용기 3개를 안 쓰셨어요</span>
+      </div>
+      <button class="btn" type="button" data-go="5">내 그릇장 보기 ›</button>
+    </div>
+  </section>
+
+  <!-- 5. 내 그릇장 -->
+  <section class="view" data-step="5" aria-label="내 그릇장" style="background:var(--bg)">
+    <div class="hdr"><button class="iconbtn" type="button" aria-label="뒤로" data-go="4"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#181A1C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><span class="title">내 그릇장</span></div>
+    <div class="scroll">
+      <div style="background:#fff;padding:4px 20px 16px;display:flex;flex-direction:column;gap:12px">
+        <div style="font-size:18px"><b>단골손님,</b> 홍길동님</div>
+        <div class="shelf" role="group" aria-label="단골 가게 그릇">
+          <button class="bowlbtn" type="button" aria-pressed="false" data-shop="gukbap">
+            <svg width="80" height="60" viewBox="0 0 200 150" aria-hidden="true"><defs><clipPath id="ba"><path d="M10 40h180a90 90 0 0 1-180 0z"/></clipPath></defs><path d="M16 46h180a90 90 0 0 1-180 0z" fill="#181A1C"/><g clip-path="url(#ba)"><rect x="0" y="40" width="200" height="110" fill="#00A39B"/></g><path d="M10 40h180a90 90 0 0 1-180 0z" fill="none" stroke="#181A1C" stroke-width="7"/></svg>
+            <b style="font-size:12px">국밥집</b><span class="chip black" style="font-size:10px">서비스 도착</span>
+          </button>
+          <button class="bowlbtn" type="button" aria-pressed="true" data-shop="yeop">
+            <svg width="80" height="60" viewBox="0 0 200 150" aria-hidden="true"><defs><clipPath id="bb"><path d="M10 40h180a90 90 0 0 1-180 0z"/></clipPath></defs><path d="M16 46h180a90 90 0 0 1-180 0z" fill="#181A1C"/><g clip-path="url(#bb)"><rect x="0" y="40" width="200" height="110" fill="#fff"/><rect x="0" y="62" width="200" height="88" fill="#00A39B"/></g><path d="M10 40h180a90 90 0 0 1-180 0z" fill="none" stroke="#181A1C" stroke-width="7"/></svg>
+            <b style="font-size:12px">엽기떡볶이</b><span style="font-size:11px;font-weight:700">4 / 5</span>
+          </button>
+          <button class="bowlbtn" type="button" aria-pressed="false" data-shop="hk">
+            <svg width="80" height="60" viewBox="0 0 200 150" aria-hidden="true"><defs><clipPath id="bc"><path d="M10 40h180a90 90 0 0 1-180 0z"/></clipPath></defs><path d="M16 46h180a90 90 0 0 1-180 0z" fill="#181A1C"/><g clip-path="url(#bc)"><rect x="0" y="40" width="200" height="110" fill="#fff"/><rect x="0" y="118" width="200" height="32" fill="#00A39B"/></g><path d="M10 40h180a90 90 0 0 1-180 0z" fill="none" stroke="#181A1C" stroke-width="7"/></svg>
+            <b style="font-size:12px">홍콩반점</b><span style="font-size:11px;font-weight:700">1 / 5</span>
+          </button>
+        </div>
+      </div>
+      <div style="padding:12px 16px 16px;display:flex;flex-direction:column;gap:10px">
+        <div class="detail" id="detail"></div>
+        <div style="background:#fff;border:1.5px solid var(--mint5);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+          <div style="flex:1;display:flex;flex-direction:column;gap:3px">
+            <span style="font-size:12px;font-weight:700;color:var(--mint8)">국밥집 사장님이 준비했어요</span>
+            <b style="font-size:15px">다음 주문에 순대 한 접시</b>
+            <span style="font-size:12px;color:var(--fg3)">"단골손님, 늘 감사해요!"</span>
+          </div>
+          <span class="ticket">서비스</span>
+        </div>
+      </div>
+    </div>
+    <nav class="tabbar" aria-label="하단 탭">
+      <span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#97999B" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>검색</span>
+      <span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#97999B" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M4 9l1-5h14l1 5M4 9v11h16V9M4 9h16"/></svg>배민스토어</span>
+      <span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#97999B" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></svg>찜</span>
+      <span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#97999B" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg>주문내역</span>
+      <span class="on"><svg width="22" height="22" viewBox="0 0 24 24" fill="#181A1C" stroke="#181A1C" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0z"/></svg>my배민</span>
+    </nav>
+  </section>
+
+  <div class="toast" id="toast" role="status"></div>
+</div>
+</div>
+
+<script>
+const STEPS = {
+  "1":  {n:1, name:"STEP 1 · 주문 전", title:"뒤처리 예보", desc:"AI가 메뉴와 리뷰를 보고, 다 먹은 뒤 치우기가 얼마나 힘들지 미리 알려줘요. 그릇 배달이 되는 가게에서만 해결책과 함께 보여줘요."},
+  "2":  {n:2, name:"STEP 2 · 장바구니", title:"그릇 주문", desc:"주문 흐름은 그대로예요. 수저·포크 옆에 '어떻게 받으실래요?' 질문 하나만 더하고, 기본값은 없어요. 직접 골라 보세요."},
+  "3":  {n:3, name:"STEP 3 · 핵심 기능", title:"잘먹었습니다", desc:"다회용기로 받으면, 다 먹고 버튼 하나면 끝. 씻을 필요도 분리배출도 없어요. 식당에서 먹고 일어나는 것처럼요."},
+  "3b": {n:3, name:"STEP 3 · 일회용기를 골랐다면", title:"식사 후 할 일", desc:"일회용기를 고르면 치우는 일이 그대로 남아요. 같은 식사, 다른 뒷정리를 비교해 보세요."},
+  "4":  {n:4, name:"STEP 4 · 반납 직후", title:"내 그릇 한 칸", desc:"다회용기로 받아 반납할 때마다 그 가게의 '내 그릇'이 한 칸씩 채워져요. 오늘 안 한 일도 함께 보여줘요."},
+  "5":  {n:5, name:"STEP 5 · 계속 쓰게 만드는 장치", title:"내 그릇장", desc:"단골 그릇은 다회용기로 받을 때만 채워져요. 그릇이 꽉 차면 사장님이 서비스를 줘요. 그릇을 눌러 보세요."}
+};
+const SHOPS = {
+  gukbap:{name:"국밥집", n:5, sub:"그릇이 꽉 찼어요! 사장님 서비스가 도착했어요", order:"순대국 · 다대기 많이 · 그릇으로 받기"},
+  yeop:{name:"엽기떡볶이 숭실대점", n:4, sub:"한 칸 더 채우면 사장님 서비스", order:"엽기떡볶이 · 엽기오뎅 · 덜매운맛 · 그릇으로 받기"},
+  hk:{name:"홍콩반점", n:1, sub:"4칸 더 채우면 사장님 서비스", order:"짬뽕 · 면 따로 · 그릇으로 받기"}
+};
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+let rcv = null, toastT;
+
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),1800);}
+
+function go(step){
+  $$('.view').forEach(v=>v.classList.toggle('active', v.dataset.step===step));
+  const s = STEPS[step];
+  $('#stepname').textContent=s.name; $('#steptitle').textContent=s.title; $('#stepdesc').textContent=s.desc;
+  $$('#dots span').forEach((d,i)=>d.classList.toggle('on', i===s.n-1));
+  const v = document.querySelector(`.view[data-step="${step}"] .scroll`); if(v) v.scrollTop=0;
+  if(step==="1") playLevel();
+  if(step==="4") playFill();
+}
+
+function playLevel(){
+  const dots=$$('#lv i'); dots.forEach(d=>d.classList.remove('on'));
+  dots.slice(0,4).forEach((d,i)=>setTimeout(()=>d.classList.add('on'), 250+i*150));
+}
+
+function playFill(){
+  const r=$('#fillrect'); r.setAttribute('y','84'); r.setAttribute('height','66'); $('#fillcount').textContent='3 / 5칸';
+  $$('.strike').forEach(s=>s.classList.remove('done')); $('#sum').classList.remove('show');
+  setTimeout(()=>{r.setAttribute('y','62'); r.setAttribute('height','88');}, 350);
+  setTimeout(()=>{$('#fillcount').innerHTML='4 / 5칸 · 한 번 더 채우면 <b>사장님 서비스</b>';}, 900);
+  $$('.strike').forEach((s,i)=>setTimeout(()=>s.classList.add('done'), 1100+i*350));
+  setTimeout(()=>$('#sum').classList.add('show'), 2200);
+}
+
+function showShop(key){
+  const s=SHOPS[key];
+  $$('.bowlbtn').forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.shop===key)));
+  const stamps = Array.from({length:5},(_,i)=>`<i class="${i<s.n?'on':''}"></i>`).join('');
+  $('#detail').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:15px">${s.name}</b><span class="chip mint">✓ 단골 ${s.n}회째</span></div>
+    <div class="stamps" aria-label="5칸 중 ${s.n}칸">${stamps}</div>
+    <span style="font-size:13px;color:var(--fg2)">${s.sub}</span>
+    <div style="height:1px;background:var(--line)"></div>
+    <b style="font-size:14px">늘 먹던 걸로</b>
+    <span style="font-size:13px;color:var(--fg2)">${s.order}</span>
+    <button class="btn" type="button" style="height:48px;font-size:15px" data-reorder="${key}">단골메뉴 바로 주문하기 ›</button>`;
+}
+
+document.addEventListener('click', e=>{
+  const g=e.target.closest('[data-go]'); if(g){go(g.dataset.go);return;}
+  const o=e.target.closest('[data-rcv]');
+  if(o){
+    rcv=o.dataset.rcv;
+    $$('[data-rcv]').forEach(b=>b.setAttribute('aria-checked', String(b===o)));
+    const btn=$('#orderBtn'); btn.disabled=false; btn.textContent='알뜰배달 주문하기 · 14,900원';
+    return;
+  }
+  const w=e.target.closest('[data-when]');
+  if(w){$$('[data-when]').forEach(b=>b.setAttribute('aria-pressed', String(b===w)));return;}
+  const b=e.target.closest('.bowlbtn'); if(b){showShop(b.dataset.shop);return;}
+  const r=e.target.closest('[data-reorder]'); if(r){toast(`${SHOPS[r.dataset.reorder].name} 주문 완료 · 그릇으로 보내 드려요`);return;}
+});
+
+$('#orderBtn').addEventListener('click', ()=>{
+  if(!rcv) return;
+  if(rcv==='bowl'){toast('주문 완료! 40분 뒤, 식사가 끝날 즈음…'); setTimeout(()=>go('3'), 1200);}
+  else go('3b');
+});
+
+$('#thanksBtn').addEventListener('click', ()=>{
+  const when=$('[data-when][aria-pressed="true"]').dataset.when;
+  const msg=$('#msg').value.trim();
+  toast(`회수 신청 완료 (${when})${msg?' · 사장님께 인사 전달':''}`);
+  setTimeout(()=>go('4'), 1000);
+});
+
+$('#restart').addEventListener('click', ()=>{
+  rcv=null; $$('[data-rcv]').forEach(b=>b.setAttribute('aria-checked','false'));
+  const btn=$('#orderBtn'); btn.disabled=true; btn.textContent='받는 방법을 골라 주세요';
+  showShop('yeop'); go('1');
+});
+
+showShop('yeop');
+go('1');
+</script>
+</body>
+</html>
